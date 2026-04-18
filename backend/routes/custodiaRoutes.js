@@ -1,14 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const Custody = require('../models/Custodia');
+const { getChain, verifyIntegrity } = require('../controllers/custodiaController');
 const { verifyToken } = require('../middleware/authMiddleware');
 
-router.get('/:evidencia_id', verifyToken, async (req, res) => {
-  const logs = await Custody.find({
-    evidencia: req.params.evidencia_id
-  }).populate('usuario');
-
-  res.json(logs);
-});
+router.get('/:evidenciaId', verifyToken, getChain);
+router.post('/verify', verifyToken, verifyIntegrity);
 
 module.exports = router;

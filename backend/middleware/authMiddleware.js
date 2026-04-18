@@ -1,15 +1,19 @@
 const jwt = require('jsonwebtoken');
 
 exports.verifyToken = (req, res, next) => {
-  const token = req.headers.authorization;
+  const authHeader = req.headers.authorization;
 
-  if (!token) return res.status(401).json({ msg: 'Sin token' });
+  if (!authHeader) return res.status(401).json({ msg: 'Sin token' });
+
+  const token = authHeader.split(' ')[1]; // Extrae "Bearer <token>"
+
+  if (!token) return res.status(401).json({ msg: 'Formato de token inválido' });
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret_key');
     req.user = decoded;
     next();
-  } catch {
+  } catch (error) {
     res.status(401).json({ msg: 'Token inválido' });
   }
 };

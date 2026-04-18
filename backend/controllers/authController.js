@@ -1,24 +1,33 @@
-const User = require('../models/Usuario');
+const db = require('../db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 exports.register = async (req, res) => {
   try {
-    const { nombre, email, password, rol } = req.body;
+    const { nombre, email, password, rol = 'consulta' } = req.body;
 
-    const userExist = await User.findOne({ email });
-    if (userExist) return res.status(400).json({ msg: 'Usuario ya existe' });
+    // Verificar si el usuario ya existe
+    const user = await db.getAsync('SELECT id FROM usuarios WHERE email = ?', [email]);
+    if (user) {
+      return res.status(400).json({ msg: 'Usuario ya existe' });
+    }
 
+    // Hash de la contraseña
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await User.create({
+    // Crear usuario
+    const result = await db.runAsync(
+      'INSERT INTO usuarios (nombre, email, password_hash, rol) VALUES (?, ?, ?, ?)',
+      [nombre, email, hashedPassword, rol]
+    );
+
+    res.status(201).json({ 
+      id: result.lastID,
       nombre,
       email,
-      password: hashedPassword,
-      rol
+      rol,
+      msg: 'Usuario registrado exitosamente'
     });
-
-    res.status(201).json(user);
 
   } catch (error) {
     res.status(500).json({ msg: error.message });
@@ -29,19 +38,34 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ msg: 'Usuario no encontrado' });
+    // Buscar usuario
+    const user = await db.getAsync('SELECT * FROM usuarios WHERE email = ?', [email]);
+    if (!user) {
+      return res.status(404).json({ msg: 'Usuario no encontrado' });
+    }
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ msg: 'Credenciales inválidas' });
+    // Comparar contraseña
+    const isMatch = await bcrypt.compare(password, user.password_hash);
+    if (!isMatch) {
+      return res.status(400).json({ msg: 'Credenciales inválidas' });
+    }
 
+    // Generar JWT
     const token = jwt.sign(
-      { id: user._id, rol: user.rol },
+      { id: user.id, rol: user.rol },
       process.env.JWT_SECRET,
-      { expiresIn: '8h' }
+      { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
     );
 
-    res.json({ token });
+    res.json({ 
+      token,
+      user: {
+        id: user.id,
+        nombre: user.nombre,
+        email: user.email,
+        rol: user.rol
+      }
+    });
 
   } catch (error) {
     res.status(500).json({ msg: error.message });

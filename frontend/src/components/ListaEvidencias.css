@@ -1,0 +1,184 @@
+.lista-evidencias {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.lista-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 2px solid #667eea;
+  background: white;
+}
+
+.lista-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 18px;
+}
+
+.count {
+  background: #667eea;
+  color: white;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 20px;
+  color: #999;
+  text-align: center;
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 16px;
+}
+
+.empty-state .hint {
+  font-size: 14px;
+  margin-top: 10px;
+  color: #bbb;
+}
+
+.evidencias-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.evidencia-item {
+  padding: 15px 20px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: background-color 0.2s, padding 0.2s;
+}
+
+.evidencia-item:hover {
+  background-color: #f9f9f9;
+  padding-left: 25px;
+}
+
+.evidencia-item.selected {
+  background: linear-gradient(90deg, rgba(102, 126, 234, 0.05) 0%, transparent 100%);
+  border-left: 4px solid #667eea;
+  padding-left: 16px;
+}
+
+.item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: 8px;
+}
+
+.item-header h4 {
+  margin: 0;
+  color: #333;
+  font-size: 15px;
+  flex: 1;
+  word-break: break-word;
+}
+
+.tipo-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  margin-left: 8px;
+}
+
+.tipo-imagen {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.tipo-video {
+  background: #fff3e0;
+  color: #f57c00;
+}
+
+.tipo-documento {
+  background: #f3e5f5;
+  color: #7b1fa2;
+}
+
+.tipo-audio {
+  background: #e0f2f1;
+  color: #00796b;
+}
+
+.codigo {
+  margin: 5px 0;
+  font-size: 12px;
+  color: #666;
+}
+
+.usuario {
+  margin: 5px 0;
+  font-size: 12px;
+  color: #666;
+}
+
+.fecha {
+  margin: 5px 0;
+  font-size: 12px;
+  color: #999;
+}
+
+.item-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  font-size: 12px;
+}
+
+.estado {
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.estado-activa {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.estado-en_analisis {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.estado-cerrada {
+  background: #f3e5f5;
+  color: #6a1b9a;
+}
+
+.tamaño {
+  color: #999;
+}
+
+@media (max-width: 768px) {
+  .item-header {
+    flex-direction: column;
+  }
+
+  .tipo-badge {
+    margin-left: 0;
+    margin-top: 5px;
+  }
+}
