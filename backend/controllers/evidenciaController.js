@@ -3,6 +3,27 @@ const { generateHash } = require('../utils/hash');
 const fs = require('fs');
 const crypto = require('crypto');
 
+const getTipoFromMimeType = (mimetype) => {
+  if (mimetype.startsWith('image/')) return 'imagen';
+  if (mimetype.startsWith('video/')) return 'video';
+  if (mimetype.startsWith('audio/')) return 'audio';
+  if (mimetype.startsWith('text/')) return 'documento';
+
+  const documentoMimes = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'application/rtf',
+    'application/vnd.oasis.opendocument.text'
+  ];
+
+  return documentoMimes.includes(mimetype) ? 'documento' : 'documento';
+};
+
 const logAction = async (userId, evidenciaId, accion, detalle = null) => {
   try {
     await db.runAsync(
@@ -25,19 +46,23 @@ exports.uploadEvidence = async (req, res) => {
     const hash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
     
     const codigo = 'EV-' + Date.now();
+    const fechaRecoleccion = req.body.fecha_recoleccion || new Date().toISOString().slice(0, 10);
+
+    const tipo = getTipoFromMimeType(req.file.mimetype);
     const result = await db.runAsync(
       `INSERT INTO evidencias 
-       (codigo, nombre, descripcion, tipo, ruta_archivo, nombre_original, hash_sha256, tamano_bytes, usuario_id) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (codigo, nombre, descripcion, tipo, ruta_archivo, nombre_original, hash_sha256, tamano_bytes, fecha_recoleccion, usuario_id) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         codigo,
         req.body.nombre || req.file.originalname,
         req.body.descripcion || '',
-        req.file.mimetype,
+        tipo,
         filePath,
         req.file.originalname,
         hash,
         req.file.size,
+        fechaRecoleccion,
         req.user.id
       ]
     );

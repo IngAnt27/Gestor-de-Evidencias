@@ -4,7 +4,8 @@ import './SubirEvidencia.css';
 function SubirEvidencia({ user, onEvidenciaSubida }) {
   const [formData, setFormData] = useState({
     nombre: '',
-    descripcion: ''
+    descripcion: '',
+    fecha_recoleccion: ''
   });
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -39,6 +40,9 @@ function SubirEvidencia({ user, onEvidenciaSubida }) {
       form.append('file', file);
       form.append('nombre', formData.nombre || file.name);
       form.append('descripcion', formData.descripcion);
+      if (formData.fecha_recoleccion) {
+        form.append('fecha_recoleccion', formData.fecha_recoleccion);
+      }
 
       const token = localStorage.getItem('token');
       const response = await fetch('http://localhost:4000/api/evidencias', {
@@ -94,6 +98,17 @@ function SubirEvidencia({ user, onEvidenciaSubida }) {
             onChange={handleInputChange}
             placeholder="Detalles sobre la evidencia"
             rows="4"
+          />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="fecha_recoleccion">Fecha de recolección:</label>
+          <input
+            id="fecha_recoleccion"
+            type="date"
+            name="fecha_recoleccion"
+            value={formData.fecha_recoleccion}
+            onChange={handleInputChange}
           />
         </div>
 
