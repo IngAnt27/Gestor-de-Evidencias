@@ -29,6 +29,7 @@ app.get('/', (req, res) => {
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/evidencias', require('./routes/evidenciaRoutes'));
 app.use('/api/custodia', require('./routes/custodiaRoutes'));
+app.use('/api/reportes', require('./routes/reportesRoutes'));
 
 app.use((err, req, res, next) => {
   res.status(500).json({ msg: err.message });

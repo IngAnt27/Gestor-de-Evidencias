@@ -5,6 +5,9 @@ import Login from './components/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Evidencias from './pages/Evidencias';
+import Reportes from './pages/Reportes';
+import CadenaCustodia from './pages/CadenaCustodia';
+import Configuracion from './pages/Configuracion';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -46,6 +49,18 @@ function App() {
           <Route
             path="/evidencias"
             element={user ? <Evidencias user={user} /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/reportes"
+            element={user ? <Reportes user={user} /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/cadena-custodia"
+            element={user ? <CadenaCustodia user={user} /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/configuracion"
+            element={user ? <Configuracion user={user} /> : <Navigate to="/login" />}
           />
           <Route
             path="/"
