@@ -29,18 +29,18 @@ function Dashboard({ user, onLogout }) {
             <span className="icon">📋</span>
             <span>Gestión de Evidencias</span>
           </Link>
-          <a href="#" className="nav-link disabled">
+          <Link to="/cadena-custodia" className="nav-link">
             <span className="icon">🔒</span>
             <span>Cadena de Custodia</span>
-          </a>
-          <a href="#" className="nav-link disabled">
+          </Link>
+          <Link to="/reportes" className="nav-link">
             <span className="icon">📊</span>
             <span>Reportes</span>
-          </a>
-          <a href="#" className="nav-link disabled">
+          </Link>
+          <Link to="/configuracion" className="nav-link">
             <span className="icon">⚙️</span>
             <span>Configuración</span>
-          </a>
+          </Link>
         </nav>
         <section className="dashboard-content">
           <div className="welcome-card">
