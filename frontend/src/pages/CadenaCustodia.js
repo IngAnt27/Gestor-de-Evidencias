@@ -10,6 +10,7 @@ function CadenaCustodia() {
   const [error, setError] = useState('');
   const [estadoIntegridad, setEstadoIntegridad] = useState(null);
   const [verifying, setVerifying] = useState(false);
+  const [downloadingPDF, setDownloadingPDF] = useState(false);
 
   useEffect(() => {
     fetchEvidencias();
@@ -99,12 +100,42 @@ function CadenaCustodia() {
       const data = await response.json();
       setEstadoIntegridad(data);
 
-      // Recargar historial para ver la nueva verificación
       setTimeout(() => fetchHistorial(evidenciaId), 500);
     } catch (error) {
       setError(error.message);
     } finally {
       setVerifying(false);
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!selectedEvidencia) return;
+    setDownloadingPDF(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:5000/api/custodia/pdf/${selectedEvidencia.id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `trazabilidad_${selectedEvidencia.codigo}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        setError('Error al descargar el PDF');
+      }
+    } catch (error) {
+      setError('Error de conexión: ' + error.message);
+    } finally {
+      setDownloadingPDF(false);
     }
   };
 
@@ -178,13 +209,23 @@ function CadenaCustodia() {
                   <h3>{selectedEvidencia.nombre}</h3>
                   <p className="codigo-ev">{selectedEvidencia.codigo}</p>
                 </div>
-                <button
-                  onClick={() => verificarIntegridad(selectedEvidencia.id)}
-                  disabled={verifying}
-                  className="btn-verify"
-                >
-                  {verifying ? '⏳ Verificando...' : '🔐 Verificar Integridad'}
-                </button>
+                <div className="header-buttons">
+                  <button
+                    onClick={() => verificarIntegridad(selectedEvidencia.id)}
+                    disabled={verifying}
+                    className="btn-verify"
+                  >
+                    {verifying ? '⏳ Verificando...' : '🔐 Verificar Integridad'}
+                  </button>
+                  <button
+                    onClick={handleDownloadPDF}
+                    disabled={downloadingPDF}
+                    className="btn-download-pdf"
+                    title="Descargar Certificado de Trazabilidad Digital"
+                  >
+                    {downloadingPDF ? '⏳ Descargando...' : '📄 Descargar PDF'}
+                  </button>
+                </div>
               </div>
 
               {estadoIntegridad && (

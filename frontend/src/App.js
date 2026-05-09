@@ -52,15 +52,15 @@ function App() {
           />
           <Route
             path="/reportes"
-            element={user ? <Reportes user={user} /> : <Navigate to="/login" />}
+            element={user ? <Reportes /> : <Navigate to="/login" />}
           />
           <Route
             path="/cadena-custodia"
-            element={user ? <CadenaCustodia user={user} /> : <Navigate to="/login" />}
+            element={user ? <CadenaCustodia /> : <Navigate to="/login" />}
           />
           <Route
             path="/configuracion"
-            element={user ? <Configuracion user={user} /> : <Navigate to="/login" />}
+            element={user ? <Configuracion /> : <Navigate to="/login" />}
           />
           <Route
             path="/"
