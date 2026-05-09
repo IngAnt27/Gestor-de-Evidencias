@@ -21,7 +21,7 @@ function CadenaCustodia() {
     setError('');
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/evidencias', {
+      const response = await fetch('http://localhost:4000/api/evidencias', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -42,10 +42,31 @@ function CadenaCustodia() {
 
   const fetchHistorial = async (evidenciaId) => {
     setLoadingHistorial(true);
+    setVerifying(true);
     setError('');
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/custodia/${evidenciaId}`, {
+
+      const verifyResponse = await fetch('http://localhost:4000/api/custodia/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          evidenciaId: evidenciaId,
+          hashProvided: evidencias.find(e => e.id === evidenciaId)?.hash_sha256
+        })
+      });
+
+      if (!verifyResponse.ok) {
+        throw new Error('Error al verificar integridad');
+      }
+
+      const verificationData = await verifyResponse.json();
+      setEstadoIntegridad(verificationData);
+
+      const response = await fetch(`http://localhost:4000/api/custodia/${evidenciaId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -57,55 +78,19 @@ function CadenaCustodia() {
 
       const data = await response.json();
       setHistorial(data);
-
-      // Verificar integridad automáticamente
-      await verificarIntegridad(evidenciaId);
     } catch (error) {
       setError(error.message);
     } finally {
       setLoadingHistorial(false);
+      setVerifying(false);
     }
   };
 
-  const handleSelectEvidencia = (evidencia) => {
+  const handleSelectEvidencia = async (evidencia) => {
     setSelectedEvidencia(evidencia);
     setHistorial([]);
     setEstadoIntegridad(null);
-    fetchHistorial(evidencia.id);
-  };
-
-  const verificarIntegridad = async (evidenciaId) => {
-    const evidencia = evidencias.find(e => e.id === evidenciaId);
-    if (!evidencia) return;
-
-    setVerifying(true);
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/custodia/verify', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          evidenciaId: evidenciaId,
-          hashProvided: evidencia.hash_sha256
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Error al verificar integridad');
-      }
-
-      const data = await response.json();
-      setEstadoIntegridad(data);
-
-      setTimeout(() => fetchHistorial(evidenciaId), 500);
-    } catch (error) {
-      setError(error.message);
-    } finally {
-      setVerifying(false);
-    }
+    await fetchHistorial(evidencia.id);
   };
 
   const handleDownloadPDF = async () => {
@@ -113,7 +98,7 @@ function CadenaCustodia() {
     setDownloadingPDF(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/custodia/pdf/${selectedEvidencia.id}`, {
+      const response = await fetch(`http://localhost:4000/api/custodia/pdf/${selectedEvidencia.id}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -147,7 +132,9 @@ function CadenaCustodia() {
       'edicion_metadata': '✏️',
       'cambio_estado': '🔄',
       'eliminacion': '🗑️',
-      'verificacion_hash': '🔐'
+      'verificacion_hash': '🔐',
+      'firma_avanzada': '🖋️',
+      'verificacion_firma': '✅'
     };
     return iconMap[accion] || '📌';
   };
@@ -160,7 +147,9 @@ function CadenaCustodia() {
       'edicion_metadata': 'Edición de Metadatos',
       'cambio_estado': 'Cambio de Estado',
       'eliminacion': 'Eliminación',
-      'verificacion_hash': 'Verificación de Hash'
+      'verificacion_hash': 'Verificación de Hash',
+      'firma_avanzada': 'Firma Avanzada',
+      'verificacion_firma': 'Verificación de Firma'
     };
     return formatted[accion] || accion;
   };
@@ -211,7 +200,7 @@ function CadenaCustodia() {
                 </div>
                 <div className="header-buttons">
                   <button
-                    onClick={() => verificarIntegridad(selectedEvidencia.id)}
+                    onClick={() => fetchHistorial(selectedEvidencia.id)}
                     disabled={verifying}
                     className="btn-verify"
                   >

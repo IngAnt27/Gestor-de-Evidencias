@@ -5,6 +5,7 @@ const upload = require('../middleware/upload');
 const { verifyToken, isAdmin } = require('../middleware/authMiddleware');
 
 router.post('/', verifyToken, upload.single('file'), ctrl.uploadEvidence);
+router.post('/:id/sign', verifyToken, ctrl.signEvidence);
 router.get('/', verifyToken, ctrl.getAll);
 router.get('/:id', verifyToken, ctrl.getById);
 router.put('/:id', verifyToken, ctrl.update);

@@ -39,7 +39,9 @@ accion TEXT NOT NULL CHECK (accion IN (
     'edicion_metadata',
     'cambio_estado',
     'eliminacion',
-    'verificacion_hash'
+    'firma_avanzada',
+    'verificacion_hash',
+    'verificacion_firma'
 )),
 detalle TEXT,
 ip_origen TEXT,

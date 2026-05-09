@@ -8,6 +8,19 @@ const db = new sqlite3.Database(dbPath, (err) => {
     console.error('Error opening database:', err.message);
   } else {
     console.log('Connected to SQLite database at', dbPath);
+    db.serialize(() => {
+      db.all('PRAGMA table_info(evidencias)', (schemaErr, columns) => {
+        if (!schemaErr && Array.isArray(columns) && !columns.find(col => col.name === 'firma_avanzada')) {
+          db.run('ALTER TABLE evidencias ADD COLUMN firma_avanzada TEXT', (alterErr) => {
+            if (alterErr) {
+              console.error('Error adding firma_avanzada column:', alterErr.message);
+            } else {
+              console.log('Migrated database: added firma_avanzada column');
+            }
+          });
+        }
+      });
+    });
   }
 });
 

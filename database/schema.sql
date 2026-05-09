@@ -21,6 +21,7 @@ tipo ENUM('imagen','video','documento','audio') NOT NULL,
 ruta_archivo VARCHAR(500) NOT NULL,
 nombre_original VARCHAR(300) NOT NULL,
 hash_sha256 CHAR(64) NOT NULL,
+firma_avanzada TEXT,
 tamano_bytes BIGINT UNSIGNED NOT NULL DEFAULT 0,
 estado ENUM('activa','en_analisis','cerrada') NOT NULL DEFAULT 'activa',
 fecha_recoleccion DATE NOT NULL,
@@ -43,7 +44,9 @@ accion ENUM(
     'edicion_metadata',
     'cambio_estado',
     'eliminacion',
-    'verificacion_hash'
+    'firma_avanzada',
+    'verificacion_hash',
+    'verificacion_firma'
 ) NOT NULL,
 detalle VARCHAR(500),
 ip_origen VARCHAR(45),
