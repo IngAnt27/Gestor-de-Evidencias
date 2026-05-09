@@ -26,6 +26,9 @@ estado ENUM('activa','en_analisis','cerrada') NOT NULL DEFAULT 'activa',
 fecha_recoleccion DATE NOT NULL,
 fecha_subida DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 usuario_id INT UNSIGNED NOT NULL,
+firma_avanzada LONGTEXT,
+firma_usuario_nombre VARCHAR(100),
+firma_timestamp DATETIME,
 eliminado TINYINT(1) NOT NULL DEFAULT 0,
 fecha_eliminado DATETIME,
 CONSTRAINT fk_evidencia_usuario
@@ -43,7 +46,9 @@ accion ENUM(
     'edicion_metadata',
     'cambio_estado',
     'eliminacion',
-    'verificacion_hash'
+    'firma_avanzada',
+    'verificacion_hash',
+    'verificacion_firma'
 ) NOT NULL,
 detalle VARCHAR(500),
 ip_origen VARCHAR(45),

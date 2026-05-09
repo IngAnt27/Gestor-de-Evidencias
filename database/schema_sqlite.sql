@@ -23,6 +23,9 @@ estado TEXT NOT NULL DEFAULT 'activa' CHECK (estado IN ('activa','en_analisis','
 fecha_recoleccion DATE NOT NULL,
 fecha_subida DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 usuario_id INTEGER NOT NULL,
+firma_avanzada TEXT,
+firma_usuario_nombre TEXT,
+firma_timestamp DATETIME,
 eliminado INTEGER NOT NULL DEFAULT 0,
 fecha_eliminado DATETIME,
 FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
@@ -39,7 +42,9 @@ accion TEXT NOT NULL CHECK (accion IN (
     'edicion_metadata',
     'cambio_estado',
     'eliminacion',
-    'verificacion_hash'
+    'firma_avanzada',
+    'verificacion_hash',
+    'verificacion_firma'
 )),
 detalle TEXT,
 ip_origen TEXT,

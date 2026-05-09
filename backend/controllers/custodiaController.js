@@ -1,5 +1,6 @@
 const db = require('../db');
 const PDFDocument = require('pdfkit');
+const { signHash, verifyHashSignature } = require('../utils/signature');
 
 exports.getChain = async (req, res) => {
   try {
@@ -15,6 +16,58 @@ exports.getChain = async (req, res) => {
     );
 
     res.json(chain);
+  } catch (error) {
+    res.status(500).json({ msg: error.message });
+  }
+};
+
+exports.signAdvancedSignature = async (req, res) => {
+  try {
+    const { evidenciaId } = req.body;
+
+    const evidencia = await db.getAsync(
+      'SELECT hash_sha256 FROM evidencias WHERE id = ? AND eliminado = 0',
+      [evidenciaId]
+    );
+
+    if (!evidencia) {
+      return res.status(404).json({ msg: 'Evidencia no encontrada' });
+    }
+
+    const usuario = await db.getAsync(
+      'SELECT id, nombre FROM usuarios WHERE id = ?',
+      [req.user.id]
+    );
+
+    if (!usuario) {
+      return res.status(404).json({ msg: 'Usuario no encontrado' });
+    }
+
+    // Generar firma electrónica avanzada
+    const firma_avanzada = signHash(evidencia.hash_sha256, usuario.nombre);
+    const firma_timestamp = new Date().toISOString();
+
+    // Guardar firma en la evidencia
+    await db.runAsync(
+      `UPDATE evidencias 
+       SET firma_avanzada = ?, firma_usuario_nombre = ?, firma_timestamp = ?
+       WHERE id = ?`,
+      [firma_avanzada, usuario.nombre, firma_timestamp, evidenciaId]
+    );
+
+    // Registrar en cadena de custodia
+    await db.runAsync(
+      `INSERT INTO cadena_custodia (evidencia_id, usuario_id, accion, detalle, hash_valido)
+       VALUES (?, ?, 'firma_avanzada', ?, 1)`,
+      [evidenciaId, req.user.id, `Firmado por ${usuario.nombre}`]
+    );
+
+    res.json({
+      msg: 'Firma electrónica avanzada generada exitosamente',
+      firma_avanzada: firma_avanzada.substring(0, 50) + '...',
+      usuario: usuario.nombre,
+      timestamp: firma_timestamp
+    });
   } catch (error) {
     res.status(500).json({ msg: error.message });
   }
@@ -51,6 +104,41 @@ exports.verifyIntegrity = async (req, res) => {
   }
 };
 
+exports.verifyAdvancedSignature = async (req, res) => {
+  try {
+    const { evidenciaId } = req.body;
+
+    const evidencia = await db.getAsync(
+      'SELECT hash_sha256, firma_avanzada, firma_usuario_nombre FROM evidencias WHERE id = ? AND eliminado = 0',
+      [evidenciaId]
+    );
+
+    if (!evidencia) {
+      return res.status(404).json({ msg: 'Evidencia no encontrada' });
+    }
+
+    if (!evidencia.firma_avanzada) {
+      return res.status(400).json({ msg: 'La evidencia no tiene firma electrónica avanzada' });
+    }
+
+    const isValid = verifyHashSignature(evidencia.hash_sha256, evidencia.firma_avanzada, evidencia.firma_usuario_nombre);
+
+    await db.runAsync(
+      `INSERT INTO cadena_custodia (evidencia_id, usuario_id, accion, hash_valido, detalle)
+       VALUES (?, ?, 'verificacion_firma', ?, ?)`,
+      [evidenciaId, req.user.id, isValid ? 1 : 0, `Verificado firma de ${evidencia.firma_usuario_nombre}`]
+    );
+
+    res.json({
+      valido: isValid,
+      usuario_firma: evidencia.firma_usuario_nombre,
+      msg: isValid ? 'Firma avanzada verificada exitosamente' : 'Firma avanzada no válida'
+    });
+  } catch (error) {
+    res.status(500).json({ msg: error.message });
+  }
+};
+
 exports.generateTraceabilityPDF = async (req, res) => {
   try {
     const { evidenciaId } = req.params;
@@ -76,19 +164,21 @@ exports.generateTraceabilityPDF = async (req, res) => {
       [evidenciaId]
     );
 
-    const doc = new PDFDocument({ margin: 40 });
+    const doc = new PDFDocument({ margin: 40, bufferPages: true });
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="trazabilidad_${evidencia.codigo}.pdf"`);
 
     doc.pipe(res);
 
+    // Encabezado
     doc.fontSize(16).font('Helvetica-Bold').text('CERTIFICADO DE INTEGRIDAD Y TRAZABILIDAD DIGITAL', { align: 'center' });
     doc.fontSize(11).font('Helvetica').text('Gestor de Evidencias Digitales de Guatemala', { align: 'center' });
     doc.moveDown(0.3);
     doc.moveTo(40, doc.y).lineTo(555, doc.y).stroke();
     doc.moveDown(0.5);
 
+    // Información de la evidencia
     doc.fontSize(12).font('Helvetica-Bold').text('INFORMACIÓN DE LA EVIDENCIA', { underline: true });
     doc.moveDown(0.3);
 
@@ -98,84 +188,93 @@ exports.generateTraceabilityPDF = async (req, res) => {
     doc.text(`Nombre: ${evidencia.nombre_original}`);
     doc.text(`Tipo: ${evidencia.tipo}   |   Tamaño: ${(evidencia.tamano_bytes / 1024).toFixed(2)} KB`);
     doc.text(`Subido por: ${evidencia.usuario_nombre}`);
-    doc.text(`Fecha de Carga: ${new Date(evidencia.fecha_subida).toLocaleString('es-GT')}`);
+    doc.text(`Fecha de subida: ${new Date(evidencia.fecha_subida).toLocaleString('es-GT')}`);
     doc.moveDown(0.5);
 
-    doc.fontSize(11).font('Helvetica-Bold').text('HASH SHA-256 (FIRMA DIGITAL)', { underline: true });
+    // Hash SHA-256
+    doc.fontSize(11).font('Helvetica-Bold').text('VERIFICACIÓN DE INTEGRIDAD', { underline: true });
     doc.moveDown(0.2);
-    doc.font('Courier').fontSize(9).text(evidencia.hash_sha256, { wordWrap: true });
-    doc.moveDown(0.5);
-
-    doc.fontSize(11).font('Helvetica-Bold').text('HISTORIAL DE ACCESOS Y MODIFICACIONES', { underline: true });
+    doc.font('Helvetica').fontSize(9);
+    doc.text('Hash SHA-256 (Firma Digital):', { continued: true });
+    doc.fontSize(8).text('\n' + evidencia.hash_sha256, { continued: true });
     doc.moveDown(0.3);
 
-    const tableTop = doc.y;
-    const col1 = 40, col2 = 140, col3 = 280, col4 = 420;
-    const rowHeight = 20;
+    // Firma Electrónica Avanzada
+    if (evidencia.firma_avanzada) {
+      doc.fontSize(11).font('Helvetica-Bold').text('FIRMA ELECTRÓNICA AVANZADA (RSA-SHA256)', { underline: true });
+      doc.moveDown(0.2);
+      doc.font('Helvetica').fontSize(10);
+      doc.text(`Firmado por: ${evidencia.firma_usuario_nombre}`);
+      doc.text(`Fecha de firma: ${new Date(evidencia.firma_timestamp).toLocaleString('es-GT')}`);
+      doc.moveDown(0.3);
+      doc.font('Helvetica').fontSize(8);
+      doc.text('Firma (primeros 100 caracteres):');
+      doc.text(evidencia.firma_avanzada.substring(0, 100) + '...');
+      doc.moveDown(0.5);
+    }
 
-    doc.font('Helvetica-Bold').fontSize(9);
-    doc.text('Fecha/Hora', col1, tableTop);
-    doc.text('Acción', col2, tableTop);
-    doc.text('Usuario', col3, tableTop);
+    // Cadena de Custodia
+    doc.fontSize(11).font('Helvetica-Bold').text('CADENA DE CUSTODIA (HISTORIAL COMPLETO)', { underline: true });
+    doc.moveDown(0.3);
+
+    doc.fontSize(9).font('Helvetica');
+    doc.text(`Total de registros: ${chain.length}`);
+    doc.moveDown(0.2);
+
+    // Tabla de cadena
+    const tableTop = doc.y;
+    const col1 = 50;
+    const col2 = 150;
+    const col3 = 280;
+    const col4 = 430;
+
+    doc.fontSize(8).font('Helvetica-Bold');
+    doc.text('Fecha', col1, tableTop);
+    doc.text('Usuario', col2, tableTop);
+    doc.text('Acción', col3, tableTop);
     doc.text('Estado', col4, tableTop);
 
     doc.moveTo(40, tableTop + 15).lineTo(555, tableTop + 15).stroke();
 
-    let currentY = tableTop + 20;
-    doc.font('Helvetica').fontSize(8);
+    let y = tableTop + 20;
+    const pageHeight = doc.page.height - 60;
 
-    chain.forEach((entry, index) => {
-      if (currentY > doc.page.height - 100) {
+    doc.font('Helvetica').fontSize(7);
+
+    for (const record of chain) {
+      if (y > pageHeight) {
         doc.addPage();
-        currentY = 40;
+        y = 50;
+        doc.fontSize(8).font('Helvetica-Bold');
+        doc.text('Fecha', col1, y);
+        doc.text('Usuario', col2, y);
+        doc.text('Acción', col3, y);
+        doc.text('Estado', col4, y);
+        doc.moveTo(40, y + 15).lineTo(555, y + 15).stroke();
+        y += 25;
+        doc.fontSize(7).font('Helvetica');
       }
 
-      const fecha = new Date(entry.fecha).toLocaleString('es-GT');
-      const accion = entry.accion.replace(/_/g, ' ').toUpperCase();
-      const usuario = entry.usuario_nombre;
-      const estado = entry.hash_valido === 0 && entry.accion === 'verificacion_hash' ? '✗ FALLIDO' : '✓ OK';
+      const fecha = new Date(record.fecha).toLocaleString('es-GT');
+      const accion = record.accion.replace(/_/g, ' ').toUpperCase();
+      const estado = record.hash_valido === 1 ? '✓ VÁLIDO' : record.hash_valido === 0 ? '✗ INVÁLIDO' : 'N/A';
 
-      doc.text(fecha.substring(0, 16), col1, currentY);
-      doc.text(accion, col2, currentY);
-      doc.text(usuario, col3, currentY);
-      doc.text(estado, col4, currentY);
+      doc.text(fecha, col1, y, { width: 90 });
+      doc.text(record.usuario_nombre, col2, y, { width: 120 });
+      doc.text(accion, col3, y, { width: 140 });
+      doc.text(estado, col4, y);
 
-      if (index < chain.length - 1) {
-        currentY += rowHeight;
-      }
-    });
+      y += 12;
+    }
 
     doc.moveDown(1);
+
+    // Nota legal
     doc.moveTo(40, doc.y).lineTo(555, doc.y).stroke();
-    doc.moveDown(0.5);
-
-    doc.fontSize(9).font('Helvetica-Bold').text('VALIDACIÓN LEGAL', { underline: true });
-    doc.moveDown(0.2);
-
-    doc.font('Helvetica').fontSize(8).text(
-      'Este certificado de integridad y trazabilidad se emite conforme a lo establecido en el Decreto 47-2008 ' +
-      'de la República de Guatemala, que regula la Firma Digital y sus aplicaciones. La cadena de custodia ' +
-      'presentada constituye evidencia legal de los accesos, modificaciones y verificaciones realizadas en el archivo.',
-      { align: 'justify' }
-    );
-
     doc.moveDown(0.3);
-    doc.text(
-      'El Hash SHA-256 presente en este certificado constituye la firma digital de la evidencia, ' +
-      'garantizando su autenticidad e integridad según normativa guatemalteca vigente.',
-      { align: 'justify' }
-    );
-
-    const pageCount = doc.bufferedPageRange().count;
-    for (let i = 0; i < pageCount; i++) {
-      doc.switchToPage(i);
-      doc.fontSize(8).font('Helvetica').text(
-        `Generado: ${new Date().toLocaleString('es-GT')} | Página ${i + 1} de ${pageCount}`,
-        40,
-        doc.page.height - 30,
-        { align: 'center' }
-      );
-    }
+    doc.fontSize(8).font('Helvetica-Oblique');
+    doc.text('NOTA LEGAL: Este certificado tiene validez legal de conformidad con el Decreto 47-2008 de Guatemala (Ley para el Reconocimiento de las Comunicaciones y Firmas Electrónicas).', { align: 'justify' });
+    doc.fontSize(7).text('Los hashes SHA-256 y las firmas digitales RSA-SHA256 garantizan la integridad y autenticidad de las evidencias.', { align: 'justify' });
 
     doc.end();
   } catch (error) {
