@@ -1,4 +1,7 @@
 const db = require('../db');
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
 const PDFDocument = require('pdfkit');
 const { signHash, verifyHashSignature } = require('../utils/signature');
 
@@ -44,8 +47,8 @@ exports.signAdvancedSignature = async (req, res) => {
     }
 
     // Generar firma electrónica avanzada
-    const firma_avanzada = signHash(evidencia.hash_sha256, usuario.nombre);
     const firma_timestamp = new Date().toISOString();
+    const firma_avanzada = signHash(evidencia.hash_sha256, usuario.nombre, firma_timestamp);
 
     // Guardar firma en la evidencia
     await db.runAsync(
@@ -78,7 +81,7 @@ exports.verifyIntegrity = async (req, res) => {
     const { evidenciaId, hashProvided } = req.body;
 
     const evidencia = await db.getAsync(
-      'SELECT hash_sha256 FROM evidencias WHERE id = ?',
+      'SELECT hash_sha256, ruta_archivo FROM evidencias WHERE id = ? AND eliminado = 0',
       [evidenciaId]
     );
 
@@ -86,18 +89,125 @@ exports.verifyIntegrity = async (req, res) => {
       return res.status(404).json({ msg: 'Evidencia no encontrada' });
     }
 
-    const isValid = evidencia.hash_sha256 === hashProvided;
+    const evidenciaPath = path.isAbsolute(evidencia.ruta_archivo)
+      ? evidencia.ruta_archivo
+      : path.join(__dirname, '..', evidencia.ruta_archivo);
+
+    let hashCalculado = null;
+    let isValid = false;
+    let detalle = '';
+
+    if (evidencia.ruta_archivo && fs.existsSync(evidenciaPath)) {
+      const fileBuffer = fs.readFileSync(evidenciaPath);
+      hashCalculado = crypto.createHash('sha256').update(fileBuffer).digest('hex');
+      isValid = hashCalculado === evidencia.hash_sha256;
+      detalle = isValid
+        ? 'Hash calculado coincide con el hash registrado'
+        : 'Hash calculado no coincide con el hash registrado';
+    } else if (hashProvided) {
+      isValid = evidencia.hash_sha256 === hashProvided;
+      detalle = isValid
+        ? 'Hash proporcionado coincide con el hash registrado'
+        : 'Hash proporcionado no coincide con el hash registrado';
+    } else {
+      return res.status(400).json({ msg: 'No se pudo verificar la integridad: archivo no disponible y no se proporcionó hash' });
+    }
 
     await db.runAsync(
-      `INSERT INTO cadena_custodia (evidencia_id, usuario_id, accion, hash_valido)
-       VALUES (?, ?, 'verificacion_hash', ?)`,
-      [evidenciaId, req.user.id, isValid ? 1 : 0]
+      `INSERT INTO cadena_custodia (evidencia_id, usuario_id, accion, hash_valido, detalle)
+       VALUES (?, ?, 'verificacion_hash', ?, ?)`,
+      [evidenciaId, req.user.id, isValid ? 1 : 0, detalle]
     );
 
     res.json({
       valido: isValid,
       hashEsperado: evidencia.hash_sha256,
-      msg: isValid ? 'Hash verificado exitosamente' : 'Hash no coincide'
+      hashCalculado,
+      msg: isValid ? 'Hash verificado exitosamente' : 'Archivo no coincide o corrupto - posible alteración detectada'
+    });
+  } catch (error) {
+    res.status(500).json({ msg: error.message });
+  }
+};
+
+exports.verifyDoubleCheck = async (req, res) => {
+  try {
+    const { evidenciaId } = req.body;
+
+    const evidencia = await db.getAsync(
+      'SELECT hash_sha256, ruta_archivo, nombre_original, tipo, tamano_bytes FROM evidencias WHERE id = ? AND eliminado = 0',
+      [evidenciaId]
+    );
+
+    if (!evidencia) {
+      return res.status(404).json({ msg: 'Evidencia no encontrada' });
+    }
+
+    const evidenciaPath = path.isAbsolute(evidencia.ruta_archivo)
+      ? evidencia.ruta_archivo
+      : path.join(__dirname, '..', evidencia.ruta_archivo);
+
+    let resultados = {
+      hashValido: false,
+      archivoExiste: false,
+      tamanoCoincide: false,
+      tipoCoincide: false,
+      verificacionCompleta: false,
+      detalles: []
+    };
+
+    // Verificar existencia del archivo
+    if (fs.existsSync(evidenciaPath)) {
+      resultados.archivoExiste = true;
+      resultados.detalles.push('Archivo encontrado en el sistema');
+
+      const stats = fs.statSync(evidenciaPath);
+      const fileBuffer = fs.readFileSync(evidenciaPath);
+
+      // Verificar hash
+      const hashCalculado = crypto.createHash('sha256').update(fileBuffer).digest('hex');
+      resultados.hashValido = hashCalculado === evidencia.hash_sha256;
+      resultados.detalles.push(resultados.hashValido ?
+        'Hash SHA-256 verificado correctamente' :
+        'Hash SHA-256 no coincide - posible alteración');
+
+      // Verificar tamaño
+      resultados.tamanoCoincide = stats.size === evidencia.tamano_bytes;
+      resultados.detalles.push(resultados.tamanoCoincide ?
+        `Tamaño verificado: ${stats.size} bytes` :
+        `Tamaño no coincide: esperado ${evidencia.tamano_bytes}, actual ${stats.size}`);
+
+      // Verificar tipo (básico)
+      const extensionEsperada = evidencia.nombre_original.split('.').pop()?.toLowerCase();
+      const extensionActual = evidenciaPath.split('.').pop()?.toLowerCase();
+      resultados.tipoCoincide = extensionEsperada === extensionActual;
+      resultados.detalles.push(resultados.tipoCoincide ?
+        `Tipo de archivo verificado: .${extensionActual}` :
+        `Tipo no coincide: esperado .${extensionEsperada}, actual .${extensionActual}`);
+
+    } else {
+      resultados.detalles.push('Archivo no encontrado en el sistema de archivos');
+    }
+
+    // Verificación completa requiere que todos los checks pasen
+    resultados.verificacionCompleta = resultados.archivoExiste &&
+                                      resultados.hashValido &&
+                                      resultados.tamanoCoincide &&
+                                      resultados.tipoCoincide;
+
+    const mensajeFinal = resultados.verificacionCompleta ?
+      'Verificación judicial completa: Archivo íntegro y auténtico' :
+      'Verificación judicial: Anomalías detectadas - requiere investigación';
+
+    await db.runAsync(
+      `INSERT INTO cadena_custodia (evidencia_id, usuario_id, accion, hash_valido, detalle)
+       VALUES (?, ?, 'verificacion_judicial', ?, ?)`,
+      [evidenciaId, req.user.id, resultados.verificacionCompleta ? 1 : 0, mensajeFinal]
+    );
+
+    res.json({
+      ...resultados,
+      msg: mensajeFinal
     });
   } catch (error) {
     res.status(500).json({ msg: error.message });
@@ -109,7 +219,7 @@ exports.verifyAdvancedSignature = async (req, res) => {
     const { evidenciaId } = req.body;
 
     const evidencia = await db.getAsync(
-      'SELECT hash_sha256, firma_avanzada, firma_usuario_nombre FROM evidencias WHERE id = ? AND eliminado = 0',
+      'SELECT hash_sha256, firma_avanzada, firma_usuario_nombre, firma_timestamp FROM evidencias WHERE id = ? AND eliminado = 0',
       [evidenciaId]
     );
 
@@ -121,7 +231,12 @@ exports.verifyAdvancedSignature = async (req, res) => {
       return res.status(400).json({ msg: 'La evidencia no tiene firma electrónica avanzada' });
     }
 
-    const isValid = verifyHashSignature(evidencia.hash_sha256, evidencia.firma_avanzada, evidencia.firma_usuario_nombre);
+    const isValid = verifyHashSignature(
+      evidencia.hash_sha256,
+      evidencia.firma_avanzada,
+      evidencia.firma_usuario_nombre,
+      evidencia.firma_timestamp
+    );
 
     await db.runAsync(
       `INSERT INTO cadena_custodia (evidencia_id, usuario_id, accion, hash_valido, detalle)

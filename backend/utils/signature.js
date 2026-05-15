@@ -39,39 +39,29 @@ const getPublicKey = () => {
   return fs.readFileSync(publicKeyPath, 'utf8');
 };
 
-const signHash = (hash, userName = '') => {
+const signHash = (hash, userName = '', timestamp = new Date().toISOString()) => {
   const sign = crypto.createSign('RSA-SHA256');
-  const timestamp = new Date().toISOString();
-  const content = userName ? `${hash}|${userName}|${timestamp}` : hash;
+  const content = userName ? `${hash}|${userName}|${timestamp}` : `${hash}|${timestamp}`;
   sign.update(content);
   sign.end();
   return sign.sign(getPrivateKey(), 'base64');
 };
 
-const verifyHashSignature = (hash, signature, userName = '') => {
-  const verify = crypto.createVerify('RSA-SHA256');
-  // Al verificar, intentamos con la nueva estructura primero
-  // Si falla, es porque fue firmado con la estructura antigua
-  const timestamp = new Date().toISOString().split('T')[0]; // Solo comparamos fecha, no hora exacta
-  
-  try {
-    const verify_new = crypto.createVerify('RSA-SHA256');
-    verify_new.update(`${hash}|${userName}|`);
-    verify_new.end();
-    // Si esto funciona, intentamos la estructura completa
-    if (verify.verify(getPublicKey(), signature, 'base64')) {
-      return true;
-    }
-  } catch (e) {
-    // Continuar con verificación antigua
+const verifyHashSignature = (hash, signature, userName = '', timestamp = '') => {
+  const verifySignature = (content) => {
+    const verify = crypto.createVerify('RSA-SHA256');
+    verify.update(content);
+    verify.end();
+    return verify.verify(getPublicKey(), signature, 'base64');
+  };
+
+  if (timestamp) {
+    const content = userName ? `${hash}|${userName}|${timestamp}` : `${hash}|${timestamp}`;
+    if (verifySignature(content)) return true;
   }
-  
-  // Intenta con estructura antigua
-  const verify_old = crypto.createVerify('RSA-SHA256');
-  const content = userName ? `${hash}|${userName}` : hash;
-  verify_old.update(content);
-  verify_old.end();
-  return verify_old.verify(getPublicKey(), signature, 'base64');
+
+  const legacyContent = userName ? `${hash}|${userName}` : hash;
+  return verifySignature(legacyContent);
 };
 
 module.exports = {

@@ -48,7 +48,8 @@ accion ENUM(
     'eliminacion',
     'firma_avanzada',
     'verificacion_hash',
-    'verificacion_firma'
+    'verificacion_firma',
+    'verificacion_judicial'
 ) NOT NULL,
 detalle VARCHAR(500),
 ip_origen VARCHAR(45),

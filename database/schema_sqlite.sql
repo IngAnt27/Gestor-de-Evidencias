@@ -44,7 +44,8 @@ accion TEXT NOT NULL CHECK (accion IN (
     'eliminacion',
     'firma_avanzada',
     'verificacion_hash',
-    'verificacion_firma'
+    'verificacion_firma',
+    'verificacion_judicial'
 )),
 detalle TEXT,
 ip_origen TEXT,

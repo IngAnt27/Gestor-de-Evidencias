@@ -133,6 +133,14 @@
   font-size: 18px;
 }
 
+.firma-info {
+  background: #f4f6f8;
+  padding: 12px 20px;
+  border-left: 4px solid #2196F3;
+  color: #333;
+  font-size: 13px;
+}
+
 .codigo-ev {
   margin: 5px 0 0 0;
   color: #bdc3c7;
@@ -380,4 +388,194 @@
   .btn-download-pdf {
     flex: 1;
   }
+}
+
+/* Modo Oscuro */
+[data-theme="dark"] .cadena-custodia-container {
+  background-color: #1a1a1a;
+}
+
+[data-theme="dark"] .cadena-header {
+  background: #2d2d2d;
+  color: #e0e0e0;
+}
+
+[data-theme="dark"] .cadena-header h2 {
+  color: #ffffff;
+}
+
+[data-theme="dark"] .cadena-header .subtitle {
+  color: #cccccc;
+}
+
+[data-theme="dark"] .evidencias-panel,
+[data-theme="dark"] .historial-panel {
+  background: #2d2d2d;
+  border: 1px solid #404040;
+}
+
+[data-theme="dark"] .evidencias-panel h3,
+[data-theme="dark"] .historial-panel h3 {
+  background-color: #34495e;
+  color: #ffffff;
+}
+
+[data-theme="dark"] .evidencia-item {
+  background: #333;
+  border-color: #555;
+  color: #e0e0e0;
+}
+
+[data-theme="dark"] .evidencia-item:hover {
+  background: #404040;
+  border-color: #2196F3;
+}
+
+[data-theme="dark"] .evidencia-item.selected {
+  background: #1976d2;
+  border-color: #2196F3;
+}
+
+[data-theme="dark"] .item-code {
+  color: #64b5f6;
+}
+
+[data-theme="dark"] .item-name {
+  color: #e0e0e0;
+}
+
+[data-theme="dark"] .item-tipo {
+  color: #cccccc;
+}
+
+[data-theme="dark"] .estado-integridad.valido {
+  background: #1b5e20;
+  border-color: #4caf50;
+}
+
+[data-theme="dark"] .estado-integridad.invalido {
+  background: #b71c1c;
+  border-color: #f44336;
+}
+
+[data-theme="dark"] .estado-titulo {
+  color: #ffffff;
+}
+
+[data-theme="dark"] .warning {
+  color: #ffcc02;
+}
+
+[data-theme="dark"] .historial-table th {
+  background-color: #34495e;
+  color: #ffffff;
+  border-bottom-color: #555;
+}
+
+[data-theme="dark"] .historial-table tbody tr {
+  border-bottom-color: #404040;
+}
+
+[data-theme="dark"] .historial-table tbody tr:hover {
+  background-color: #333;
+}
+
+[data-theme="dark"] .historial-table tbody tr.row-error {
+  background-color: #4a148c;
+}
+
+[data-theme="dark"] .historial-table tbody tr.row-error:hover {
+  background-color: #6a1b9a;
+}
+
+[data-theme="dark"] .historial-table .fecha {
+  color: #cccccc;
+}
+
+[data-theme="dark"] .historial-table .usuario {
+  color: #64b5f6;
+}
+
+[data-theme="dark"] .historial-table .detalle {
+  color: #cccccc;
+}
+
+[data-theme="dark"] .historial-footer {
+  background-color: #2d2d2d;
+  border-top-color: #404040;
+  color: #cccccc;
+}
+
+[data-theme="dark"] .decreto-ref {
+  color: #999;
+}
+
+[data-theme="dark"] .error-message {
+  background-color: #4a148c;
+  color: #ff6b6b;
+  border-left-color: #f44336;
+}
+
+/* Botón de verificación judicial */
+.btn-judge-verify {
+  padding: 10px 15px;
+  background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin: 0 5px;
+}
+
+.btn-judge-verify:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e55a2b 0%, #e8850f 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(255, 107, 53, 0.3);
+}
+
+.btn-judge-verify:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+[data-theme="dark"] .btn-judge-verify {
+  background: linear-gradient(135deg, #ff8c42 0%, #ff6b35 100%);
+}
+
+[data-theme="dark"] .btn-judge-verify:hover:not(:disabled) {
+  background: linear-gradient(135deg, #ff6b35 0%, #e55a2b 100%);
+}
+
+/* Detalles de verificación doble */
+.double-check-details {
+  margin-top: 10px;
+}
+
+.double-check-details p {
+  margin: 5px 0;
+  font-size: 13px;
+}
+
+.detalles-lista {
+  margin-top: 10px;
+}
+
+.detalles-lista ul {
+  margin: 5px 0 0 20px;
+  padding: 0;
+}
+
+.detalles-lista li {
+  margin: 3px 0;
+  font-size: 12px;
+  color: #666;
+}
+
+[data-theme="dark"] .detalles-lista li {
+  color: #cccccc;
 }

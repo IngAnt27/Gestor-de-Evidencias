@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE } from '../services/api';
 import './Reportes.css';
 
 function Reportes() {
@@ -25,7 +26,7 @@ function Reportes() {
     setError('');
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/reportes', {
+      const response = await fetch(`${API_BASE}/api/reportes`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -47,7 +48,7 @@ function Reportes() {
   const fetchEstadisticas = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/reportes/estadisticas', {
+      const response = await fetch(`${API_BASE}/api/reportes/estadisticas`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -83,7 +84,7 @@ function Reportes() {
     setDownloadingId(evidenciaId);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/reportes/pdf/${evidenciaId}`, {
+      const response = await fetch(`${API_BASE}/api/reportes/pdf/${evidenciaId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

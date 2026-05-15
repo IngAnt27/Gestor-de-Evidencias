@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE } from '../services/api';
 import './Evidencias.css';
 import SubirEvidencia from '../components/SubirEvidencia';
 import ListaEvidencias from '../components/ListaEvidencias';
@@ -15,7 +16,7 @@ function Evidencias({ user }) {
     setError('');
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/evidencias', {
+      const response = await fetch(`${API_BASE}/api/evidencias`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

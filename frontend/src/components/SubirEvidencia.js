@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { API_BASE } from '../services/api';
 import './SubirEvidencia.css';
 
 function SubirEvidencia({ user, onEvidenciaSubida }) {
@@ -45,7 +46,7 @@ function SubirEvidencia({ user, onEvidenciaSubida }) {
       }
 
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/evidencias', {
+      const response = await fetch(`${API_BASE}/api/evidencias`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

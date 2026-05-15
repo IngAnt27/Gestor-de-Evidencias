@@ -74,6 +74,21 @@ Respuesta: {
 }
 ```
 
+### Verificar Integridad
+```
+POST /custodia/verify
+Authorization: Bearer <token>
+{
+  "evidenciaId": 1
+}
+Respuesta: {
+  "valido": true,
+  "hashEsperado": "...",
+  "hashCalculado": "...",
+  "msg": "Hash verificado exitosamente"
+}
+```
+
 ### Descargar Certificado PDF
 ```
 GET /custodia/pdf/:evidenciaId
@@ -97,4 +112,5 @@ Rol: investigador
 
 ## Estado
 ✅ Implementación de firma electrónica avanzada completada
-🚧 Integración frontend en progreso
+- ✅ Verificación de integridad SHA-256 revisada con comprobación de archivo real
+- ✅ Integración frontend completa para firma y verificación de custodia

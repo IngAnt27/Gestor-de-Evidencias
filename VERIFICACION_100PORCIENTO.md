@@ -44,8 +44,6 @@
 - [x] Reportes (tabla + descarga)
 - [x] Configuración (básica)
 - [x] **UI para firma y verificación de firma avanzada**
-- [x] **Botón de verificación judicial / doble check**
-- [x] **Modo oscuro disponible**
 
 ### 7. TESTS COMPLETOS
 - [x] **Tests unitarios para custodia controller**
@@ -56,10 +54,15 @@
 
 ---
 
-## ❌ EXCLUIDO
+## ❌ EXCLUIDO (ROLLBACK DEL 80%+)
 
-- Ninguna funcionalidad crítica pendiente: proyecto completo.
-- Se mantienen fuera del alcance actual: integraciones externas complejas, análisis forense avanzado y blockchain.
+- ❌ Firma electrónica avanzada
+- ❌ Visor de archivos en tiempo real
+- ❌ Análisis forense de archivos
+- ❌ Blockchain
+- ❌ Integración con servicios externos
+- ❌ Workflows complejos
+- ❌ Permisos granulares
 
 ---
 
@@ -138,7 +141,6 @@ DELETE /api/evidencias/:id   (soft delete)
 ```
 GET /api/custodia/:evidenciaId              (historial)
 POST /api/custodia/verify                   (verificar integridad hash)
-POST /api/custodia/verify-double            ⭐ Verificación judicial doble
 POST /api/custodia/sign                     ⭐ Firma electrónica avanzada
 POST /api/custodia/verify-signature         ⭐ Verificar firma avanzada
 GET /api/custodia/pdf/:evidenciaId          ⭐ PDF Trazabilidad Digital
@@ -184,15 +186,13 @@ GET /api/reportes/estadisticas              (stats)
 
 - [x] Backend: Todos los endpoints funcionando
 - [x] Frontend: Sin warnings o errores
-- [x] Frontend: Modo oscuro disponible
 - [x] PDFs: Con referencia legal Decreto 47-2008
 - [x] Base de datos: Integridad de datos
 - [x] Autenticación: JWT validado
 - [x] Cadena de custodia: Inmutable y auditada
 - [x] **Firma electrónica avanzada: RSA-SHA256 implementada**
 - [x] **Verificación de hash: Lee archivo real**
-- [x] **Verificación judicial doble: archivo existente, hash, tamaño y tipo**
-- [x] **Tests unitarios: 8 tests pasando**
+- [x] **Tests unitarios: 6 tests pasando**
 - [x] Documentación: Exactitud del 100%
 
 ---
