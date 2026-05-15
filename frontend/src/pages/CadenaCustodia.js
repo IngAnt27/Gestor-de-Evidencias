@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { API_BASE } from '../services/api';
 import './CadenaCustodia.css';
 
-function CadenaCustodia() {
+function CadenaCustodia({ user }) {
   const [evidencias, setEvidencias] = useState([]);
   const [selectedEvidencia, setSelectedEvidencia] = useState(null);
   const [historial, setHistorial] = useState([]);
@@ -17,6 +17,15 @@ function CadenaCustodia() {
   const [downloadingPDF, setDownloadingPDF] = useState(false);
   const [doubleCheckResult, setDoubleCheckResult] = useState(null);
   const [doubleChecking, setDoubleChecking] = useState(false);
+  const [deletingHistory, setDeletingHistory] = useState(false);
+
+  const parseJSON = async (response) => {
+    try {
+      return await response.json();
+    } catch {
+      return null;
+    }
+  };
 
   // 1. Carga inicial de evidencias - Solo ocurre una vez al montar el componente
   useEffect(() => {
@@ -35,15 +44,21 @@ function CadenaCustodia() {
         }
       });
 
-      if (!response.ok) throw new Error('Error al obtener evidencias');
+      if (!response.ok) {
+        const errorData = await parseJSON(response);
+        throw new Error(errorData?.msg || 'Error al obtener evidencias');
+      }
 
-      const data = await response.json();
+      const data = await parseJSON(response) || [];
       setEvidencias(data);
       if (selectedEvidencia) {
         const refreshed = data.find((item) => item.id === selectedEvidencia.id);
         if (refreshed) {
           setSelectedEvidencia(refreshed);
         }
+      } else if (data.length > 0) {
+        setSelectedEvidencia(data[0]);
+        fetchHistorial(data[0].id);
       }
     } catch (error) {
       setError(error.message);
@@ -63,9 +78,12 @@ function CadenaCustodia() {
         }
       });
 
-      if (!response.ok) throw new Error('Error al obtener historial');
+      if (!response.ok) {
+        const errorData = await parseJSON(response);
+        throw new Error(errorData?.msg || 'Error al obtener historial');
+      }
 
-      const data = await response.json();
+      const data = await parseJSON(response) || [];
       setHistorial(data);
     } catch (error) {
       setError('No se pudo cargar el historial: ' + error.message);
@@ -77,9 +95,11 @@ function CadenaCustodia() {
   // 3. Selección de evidencia - Rompemos el ciclo aquí
   const handleSelectEvidencia = (evidencia) => {
     setSelectedEvidencia(evidencia);
+    setHistorial([]);
     setEstadoIntegridad(null); // Limpiamos estados previos
     setEstadoFirma(null);
     setFirmaMessage('');
+    setDoubleCheckResult(null);
     setError('');
     fetchHistorial(evidencia.id); // Solo pedimos el historial existente
   };
@@ -107,11 +127,11 @@ function CadenaCustodia() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await parseJSON(response);
         throw new Error(errorData?.msg || 'Error al verificar integridad');
       }
 
-      const data = await response.json();
+      const data = await parseJSON(response);
       setEstadoIntegridad(data);
 
       await fetchEvidencias();
@@ -139,7 +159,7 @@ function CadenaCustodia() {
         body: JSON.stringify({ evidenciaId })
       });
 
-      const data = await response.json();
+      const data = await parseJSON(response);
       if (!response.ok) {
         throw new Error(data?.msg || 'Error al firmar electrónicamente');
       }
@@ -170,7 +190,7 @@ function CadenaCustodia() {
         body: JSON.stringify({ evidenciaId })
       });
 
-      const data = await response.json();
+      const data = await parseJSON(response);
       if (!response.ok) {
         throw new Error(data?.msg || 'Error al verificar firma');
       }
@@ -201,7 +221,7 @@ function CadenaCustodia() {
         body: JSON.stringify({ evidenciaId })
       });
 
-      const data = await response.json();
+      const data = await parseJSON(response);
       if (!response.ok) {
         throw new Error(data?.msg || 'Error en verificación judicial');
       }
@@ -238,12 +258,43 @@ function CadenaCustodia() {
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
       } else {
-        setError('Error al descargar el PDF');
+        const errorData = await parseJSON(response);
+        setError(errorData?.msg || 'Error al descargar el PDF');
       }
     } catch (error) {
       setError('Error de conexión: ' + error.message);
     } finally {
       setDownloadingPDF(false);
+    }
+  };
+
+  const handleEliminarHistorial = async () => {
+    if (!selectedEvidencia) return;
+    const confirmed = window.confirm('¿Deseas eliminar todo el historial de custodia para esta evidencia? Esta acción no se puede deshacer.');
+    if (!confirmed) return;
+
+    setDeletingHistory(true);
+    setError('');
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE}/api/custodia/${selectedEvidencia.id}/history`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await parseJSON(response);
+      if (!response.ok) {
+        throw new Error(data?.msg || 'No se pudo eliminar el historial');
+      }
+
+      setHistorial([]);
+      setError('');
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setDeletingHistory(false);
     }
   };
 
@@ -358,6 +409,15 @@ function CadenaCustodia() {
                   >
                     {downloadingPDF ? '⏳ Descargando...' : '📄 Descargar PDF'}
                   </button>
+                  {user && selectedEvidencia && (user.rol === 'admin' || String(user.id) === String(selectedEvidencia.usuario_id)) && (
+                    <button
+                      onClick={handleEliminarHistorial}
+                      disabled={deletingHistory || verifying || firmaLoading || doubleChecking}
+                      className="btn-delete-history"
+                    >
+                      {deletingHistory ? '⏳ Eliminando historial...' : '🗑️ Eliminar Historial'}
+                    </button>
+                  )}
                 </div>
               </div>
 

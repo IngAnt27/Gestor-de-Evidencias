@@ -24,6 +24,30 @@ exports.getChain = async (req, res) => {
   }
 };
 
+exports.deleteHistory = async (req, res) => {
+  try {
+    const { evidenciaId } = req.params;
+
+    const evidencia = await db.getAsync(
+      'SELECT id, usuario_id FROM evidencias WHERE id = ? AND eliminado = 0',
+      [evidenciaId]
+    );
+
+    if (!evidencia) {
+      return res.status(404).json({ msg: 'Evidencia no encontrada' });
+    }
+
+    if (req.user.rol !== 'admin' && Number(req.user.id) !== evidencia.usuario_id) {
+      return res.status(403).json({ msg: 'Acceso denegado. Solo el administrador o el propietario puede eliminar el historial.' });
+    }
+
+    await db.runAsync('DELETE FROM cadena_custodia WHERE evidencia_id = ?', [evidenciaId]);
+    res.json({ msg: 'Historial de custodia eliminado correctamente' });
+  } catch (error) {
+    res.status(500).json({ msg: error.message });
+  }
+};
+
 exports.signAdvancedSignature = async (req, res) => {
   try {
     const { evidenciaId } = req.body;
@@ -310,9 +334,10 @@ exports.generateTraceabilityPDF = async (req, res) => {
     doc.fontSize(11).font('Helvetica-Bold').text('VERIFICACIÓN DE INTEGRIDAD', { underline: true });
     doc.moveDown(0.2);
     doc.font('Helvetica').fontSize(9);
-    doc.text('Hash SHA-256 (Firma Digital):', { continued: true });
-    doc.fontSize(8).text('\n' + evidencia.hash_sha256, { continued: true });
-    doc.moveDown(0.3);
+    doc.text('Hash SHA-256 (Firma Digital):');
+    doc.moveDown(0.1);
+    doc.fontSize(8).text(evidencia.hash_sha256, { width: 520, lineGap: 2 });
+    doc.moveDown(0.4);
 
     // Firma Electrónica Avanzada
     if (evidencia.firma_avanzada) {

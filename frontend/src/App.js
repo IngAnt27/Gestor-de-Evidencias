@@ -58,7 +58,7 @@ function App() {
             />
             <Route
               path="/cadena-custodia"
-              element={user ? <CadenaCustodia /> : <Navigate to="/login" />}
+              element={user ? <CadenaCustodia user={user} /> : <Navigate to="/login" />}
             />
             <Route
               path="/configuracion"

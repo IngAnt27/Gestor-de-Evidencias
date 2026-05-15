@@ -144,12 +144,16 @@ exports.update = async (req, res) => {
 exports.delete = async (req, res) => {
   try {
     const evidencia = await db.getAsync(
-      'SELECT id FROM evidencias WHERE id = ?',
+      'SELECT id, usuario_id FROM evidencias WHERE id = ? AND eliminado = 0',
       [req.params.id]
     );
 
     if (!evidencia) {
       return res.status(404).json({ msg: 'Evidencia no encontrada' });
+    }
+    
+    if (req.user.rol !== 'admin' && Number(req.user.id) !== evidencia.usuario_id) {
+      return res.status(403).json({ msg: 'Acceso denegado. Solo el administrador o el propietario de la evidencia puede eliminarla.' });
     }
 
     // Marcar como eliminada (soft delete - cumple principio de no borrado legal)

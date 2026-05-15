@@ -184,9 +184,18 @@
 }
 
 .btn-verify:disabled,
-.btn-download-pdf:disabled {
+.btn-download-pdf:disabled,
+.btn-delete-history:disabled {
   background-color: #ccc;
   cursor: not-allowed;
+}
+
+.btn-delete-history {
+  background-color: #e53935;
+}
+
+.btn-delete-history:hover:not(:disabled) {
+  background-color: #d32f2f;
 }
 
 .estado-integridad {

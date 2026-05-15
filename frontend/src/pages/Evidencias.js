@@ -28,6 +28,9 @@ function Evidencias({ user }) {
 
       const data = await response.json();
       setEvidencias(data);
+      if (!selectedEvidencia && data.length > 0) {
+        setSelectedEvidencia(data[0]);
+      }
     } catch (error) {
       setError(error.message);
     } finally {
@@ -44,8 +47,47 @@ function Evidencias({ user }) {
     fetchEvidencias();
   };
 
+  const [deleting, setDeleting] = useState(false);
+
   const handleSeleccionar = (evidencia) => {
     setSelectedEvidencia(evidencia);
+  };
+
+  const handleEliminarEvidencia = async () => {
+    if (!selectedEvidencia) return;
+    const confirmed = window.confirm('¿Deseas eliminar esta evidencia? Esta acción marcará la evidencia como eliminada.');
+    if (!confirmed) return;
+
+    setDeleting(true);
+    setError('');
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE}/api/evidencias/${selectedEvidencia.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.msg || 'No se pudo eliminar la evidencia');
+      }
+
+      setSelectedEvidencia(null);
+      fetchEvidencias();
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleVerEvidencia = () => {
+    if (!selectedEvidencia || !selectedEvidencia.ruta_archivo) return;
+    const normalizedPath = selectedEvidencia.ruta_archivo.replace(/\\/g, '/').replace(/^\/+/, '');
+    const fileUrl = `${API_BASE}/${normalizedPath}`;
+    window.open(fileUrl, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -116,6 +158,30 @@ function Evidencias({ user }) {
                 <label>Fecha de Subida:</label>
                 <span>{new Date(selectedEvidencia.fecha_subida).toLocaleString()}</span>
               </div>
+            </div>
+            <div className="detalle-actions">
+              {selectedEvidencia.ruta_archivo && (
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={handleVerEvidencia}
+                >
+                  Ver evidencia
+                </button>
+              )}
+              {user && (user.rol === 'admin' || String(user.id) === String(selectedEvidencia.usuario_id)) ? (
+                <button
+                  className="btn-delete"
+                  onClick={handleEliminarEvidencia}
+                  disabled={deleting}
+                >
+                  {deleting ? 'Eliminando...' : 'Eliminar Evidencia'}
+                </button>
+              ) : (
+                <div className="permission-note">
+                  Solo el administrador o el usuario que subió esta evidencia puede eliminarla.
+                </div>
+              )}
             </div>
           </div>
         )}

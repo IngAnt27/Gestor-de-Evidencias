@@ -108,6 +108,42 @@
   border-radius: 12px;
 }
 
+.detalle-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-delete {
+  padding: 12px 20px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.btn-delete:hover:not(:disabled) {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
+.btn-delete:disabled {
+  background: #fca5a5;
+  cursor: not-allowed;
+}
+
+.permission-note {
+  color: var(--muted);
+  font-size: 13px;
+  padding: 14px 8px;
+  background: rgba(229, 231, 235, 0.8);
+  border-radius: 14px;
+  line-height: 1.4;
+}
+
 .estado-activa,
 .estado-en_analisis,
 .estado-cerrada {
