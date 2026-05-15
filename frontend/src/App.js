@@ -34,7 +34,7 @@ function App() {
   return (
     <ThemeProvider>
       <Router>
-        <div className="App">
+        <div className="App app-shell">
           <Routes>
             <Route
               path="/login"

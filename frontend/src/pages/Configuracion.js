@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useTheme } from '../context/ThemeContext';
 import './Configuracion.css';
 
 function Configuracion() {
+  const { isDarkMode, toggleTheme } = useTheme();
   const [settings, setSettings] = useState({
     notificaciones: true,
     autoActualizar: true,
@@ -11,12 +13,28 @@ function Configuracion() {
 
   const [guardado, setGuardado] = useState(false);
 
+  useEffect(() => {
+    setSettings((prev) => ({
+      ...prev,
+      tema: isDarkMode ? 'oscuro' : 'claro'
+    }));
+  }, [isDarkMode]);
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setSettings({
+    const nextSettings = {
       ...settings,
       [name]: type === 'checkbox' ? checked : value
-    });
+    };
+
+    setSettings(nextSettings);
+
+    if (name === 'tema') {
+      const nextDark = value === 'oscuro';
+      if (nextDark !== isDarkMode) {
+        toggleTheme();
+      }
+    }
   };
 
   const handleGuardar = () => {
