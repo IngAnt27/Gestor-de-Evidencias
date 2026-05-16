@@ -61,19 +61,29 @@ function Dashboard({ user, onLogout }) {
 
     try {
       const token = localStorage.getItem('token');
+      console.log('📊 Cargando métricas del dashboard...');
+      console.log('Token:', token ? 'Presente' : 'No encontrado');
+      console.log('API_BASE:', API_BASE);
+      
       const response = await fetch(`${API_BASE}/api/evidencias`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
+      console.log('📡 Respuesta de API:', response.status, response.statusText);
+
       if (!response.ok) {
-        throw new Error('No se pudieron cargar los datos de evidencias');
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
-      const total = data.length;
-      const verified = data.filter((item) => item.estado === 'Verificada').length;
-      const signed = data.filter((item) => item.estado === 'Firmada').length;
-      const alerts = data.filter((item) => item.estado === 'Pendiente').length;
+      console.log('✅ Datos recibidos:', data);
+      
+      const total = data.length || 0;
+      const verified = (data || []).filter((item) => item.estado === 'Verificada').length;
+      const signed = (data || []).filter((item) => item.estado === 'Firmada').length;
+      const alerts = (data || []).filter((item) => item.estado === 'Pendiente').length;
+
+      console.log('📈 Estadísticas calculadas:', { total, verified, signed, alerts });
 
       setStats([
         { label: 'Evidencias Registradas', value: total.toString(), icon: FileText, tone: 'primary' },
@@ -98,8 +108,9 @@ function Dashboard({ user, onLogout }) {
         status: item.estado === 'Verificada' ? 'success' : item.estado === 'Firmada' ? 'primary' : 'secondary'
       })));
     } catch (error) {
-      setError(error.message);
-      console.error('Error loading dashboard metrics:', error);
+      const errorMsg = error.message || 'Error desconocido';
+      console.error('❌ Error al cargar métricas:', errorMsg);
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -109,6 +120,7 @@ function Dashboard({ user, onLogout }) {
     loadDashboardMetrics();
 
     const handleDashboardRefresh = () => {
+      console.log('🔄 Evento dashboardRefresh recibido');
       loadDashboardMetrics();
     };
 
@@ -184,6 +196,12 @@ function Dashboard({ user, onLogout }) {
             <button className="btn-primary" onClick={handleNewEvidence}>Nueva evidencia</button>
           </div>
         </div>
+
+        {error && (
+          <div style={{ padding: '1rem', backgroundColor: '#fee2e2', color: '#991b1b', borderRadius: '0.5rem', margin: '1rem' }}>
+            <strong>⚠️ Error:</strong> {error}
+          </div>
+        )}
 
         <section className="hero-grid">
           <motion.article className="hero-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
