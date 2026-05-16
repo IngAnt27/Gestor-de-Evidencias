@@ -79,11 +79,14 @@ function Dashboard({ user, onLogout }) {
       console.log('✅ Datos recibidos:', data);
       
       const total = data.length || 0;
-      const verified = (data || []).filter((item) => item.estado === 'Verificada').length;
-      const signed = (data || []).filter((item) => item.estado === 'Firmada').length;
-      const alerts = (data || []).filter((item) => item.estado === 'Pendiente').length;
+      // Contar evidencias que tienen firma (tienen firma_avanzada)
+      const verified = (data || []).filter((item) => item.firma_avanzada && item.firma_avanzada.length > 0).length;
+      // Contar evidencias que tienen firma de usuario
+      const signed = (data || []).filter((item) => item.firma_usuario_nombre && item.firma_usuario_nombre.length > 0).length;
+      // Contar evidencias eliminadas (eliminado === 1)
+      const alerts = (data || []).filter((item) => item.eliminado === 1).length;
 
-      console.log('📈 Estadísticas calculadas:', { total, verified, signed, alerts });
+      console.log('📈 Estadísticas calculadas:', { total, verified: 'con firma', signed: 'con firma de usuario', alerts: 'eliminadas' });
 
       setStats([
         { label: 'Evidencias Registradas', value: total.toString(), icon: FileText, tone: 'primary' },
@@ -105,7 +108,7 @@ function Dashboard({ user, onLogout }) {
         time: item.fecha_subida ? new Date(item.fecha_subida).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ahora',
         title: `Evidencia ${item.codigo || item.nombre}`,
         subtitle: item.descripcion || 'Carga de nueva evidencia',
-        status: item.estado === 'Verificada' ? 'success' : item.estado === 'Firmada' ? 'primary' : 'secondary'
+        status: item.eliminado === 1 ? 'danger' : item.firma_avanzada ? 'success' : 'primary'
       })));
     } catch (error) {
       const errorMsg = error.message || 'Error desconocido';
@@ -338,7 +341,7 @@ function Dashboard({ user, onLogout }) {
                       <td>{evidence.name}</td>
                       <td>{evidence.type}</td>
                       <td>
-                        <span className={`badge ${evidence.status === 'Verificada' ? 'success' : evidence.status === 'Firmada' ? 'primary' : evidence.status === 'Pendiente' ? 'danger' : 'secondary'}`}>
+                        <span className={`badge ${evidence.status === 'activa' ? 'primary' : evidence.status === 'archivada' ? 'secondary' : 'danger'}`}>
                           {evidence.status}
                         </span>
                       </td>
