@@ -24,6 +24,30 @@ exports.getChain = async (req, res) => {
   }
 };
 
+exports.getIntegrityAlerts = async (req, res) => {
+  try {
+    // Obtener todos los registros de cadena de custodia donde hash_valido = 0 (inválido)
+    const alerts = await db.allAsync(
+      `SELECT cc.*, e.codigo, e.nombre, u.nombre as usuario_nombre
+       FROM cadena_custodia cc
+       JOIN evidencias e ON cc.evidencia_id = e.id
+       JOIN usuarios u ON cc.usuario_id = u.id
+       WHERE cc.hash_valido = 0
+       ORDER BY cc.fecha DESC`
+    );
+
+    // Contar total de alertas
+    const totalAlerts = alerts.length;
+
+    res.json({
+      total: totalAlerts,
+      alerts: alerts
+    });
+  } catch (error) {
+    res.status(500).json({ msg: error.message });
+  }
+};
+
 exports.deleteHistory = async (req, res) => {
   try {
     const { evidenciaId } = req.params;
@@ -421,4 +445,3 @@ exports.generateTraceabilityPDF = async (req, res) => {
     res.status(500).json({ msg: error.message });
   }
 };
-
