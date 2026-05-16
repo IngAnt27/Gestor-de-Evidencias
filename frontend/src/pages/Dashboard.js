@@ -99,6 +99,7 @@ function Dashboard({ user, onLogout }) {
       })));
     } catch (error) {
       setError(error.message);
+      console.error('Error loading dashboard metrics:', error);
     } finally {
       setLoading(false);
     }
@@ -197,19 +198,13 @@ function Dashboard({ user, onLogout }) {
               </div>
             </div>
             <div className="hero-statistics">
-              {stats.length > 0 ? (
-                <>
-                  <div className="hero-stat-main">
-                    <strong>{stats[0].value}</strong>
-                    <span>Evidencias totales bajo custodia</span>
-                  </div>
-                  <div className="hero-stat-footer">
-                    <p><Clock size={14} /> Última sincronización: {new Date().toLocaleTimeString()}</p>
-                  </div>
-                </>
-              ) : (
-                <p>No hay datos operativos disponibles.</p>
-              )}
+              <div className="hero-stat-main">
+                <strong>{stats[0].value}</strong>
+                <span>Evidencias totales bajo custodia</span>
+              </div>
+              <div className="hero-stat-footer">
+                <p><Clock size={14} /> Última sincronización: {new Date().toLocaleTimeString()}</p>
+              </div>
             </div>
           </motion.article>
 
@@ -241,14 +236,8 @@ function Dashboard({ user, onLogout }) {
             <div className="panel-content">
               <p>Supervisa registros de custodia en tiempo real y clasifica eventos de conservacion, verificacion y firma.</p>
               <div className="panel-list">
-                {recentEvidences.length > 0 ? (
-                  <>
-                    <p className="panel-stat"><strong>{stats[0].value}</strong> Evidencias totales bajo custodia</p>
-                    <p className="panel-meta">Última sincronización: {new Date().toLocaleTimeString()}</p>
-                  </>
-                ) : (
-                  <p>No hay datos de custodia disponibles.</p>
-                )}
+                <p className="panel-stat"><strong>{stats[0].value}</strong> Evidencias totales bajo custodia</p>
+                <p className="panel-meta">Última sincronización: {new Date().toLocaleTimeString()}</p>
               </div>
             </div>
           </motion.div>
@@ -264,14 +253,8 @@ function Dashboard({ user, onLogout }) {
             <div className="panel-content">
               <p>Obtiene un resumen rapido del analisis de integridad. Cada hash se registra como evidencia digital certificada.</p>
               <div className="panel-list">
-                {stats[1] && parseInt(stats[1].value) > 0 ? (
-                  <>
-                    <p className="panel-stat"><strong>{stats[1].value}</strong> Hashes verificados</p>
-                    <p className="panel-meta">Integridad garantizada mediante SHA-256</p>
-                  </>
-                ) : (
-                  <p>No hay datos de verificación disponibles.</p>
-                )}
+                <p className="panel-stat"><strong>{stats[1].value}</strong> Hashes verificados</p>
+                <p className="panel-meta">Integridad garantizada mediante SHA-256</p>
               </div>
             </div>
           </motion.div>
