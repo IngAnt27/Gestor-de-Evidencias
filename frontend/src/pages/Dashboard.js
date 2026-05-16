@@ -95,7 +95,7 @@ function Dashboard({ user, onLogout }) {
         time: item.fecha_subida ? new Date(item.fecha_subida).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ahora',
         title: `Evidencia ${item.codigo || item.nombre}`,
         subtitle: item.descripcion || 'Carga de nueva evidencia',
-        status: item.estado === 'Verificada' ? 'success' : item.estado === 'Firmada' ? 'primary' : item.estado === 'secondary'
+        status: item.estado === 'Verificada' ? 'success' : item.estado === 'Firmada' ? 'primary' : 'secondary'
       })));
     } catch (error) {
       setError(error.message);
@@ -111,9 +111,15 @@ function Dashboard({ user, onLogout }) {
       loadDashboardMetrics();
     };
 
+    // Escuchar cambios en evidencias desde otras páginas
     window.addEventListener('dashboardRefresh', handleDashboardRefresh);
+    
+    // Actualizar cada 30 segundos
+    const interval = setInterval(loadDashboardMetrics, 30000);
+
     return () => {
       window.removeEventListener('dashboardRefresh', handleDashboardRefresh);
+      clearInterval(interval);
     };
   }, [loadDashboardMetrics]);
 
@@ -184,26 +190,26 @@ function Dashboard({ user, onLogout }) {
               <div>
                 <p className="eyebrow">Vision General</p>
                 <h2>Estado operativo del sistema</h2>
-                <p className="eyebrow">Resumen del Sistema</p>
-                <h2>Integridad de la Base de Datos</h2>
               </div>
-              <span className="badge primary">Sistema Estable</span>
               <div className="pulse-indicator">
                 <span className="pulse-dot"></span>
                 <span className="badge primary">Sistema Activo</span>
               </div>
             </div>
-            <div className="hero-statistics empty-state">
-              <p>No hay datos operativos disponibles.</p>
-            </div>
             <div className="hero-statistics">
-              <div className="hero-stat-main">
-                <strong>{stats[0].value}</strong>
-                <span>Evidencias totales bajo custodia</span>
-              </div>
-              <div className="hero-stat-footer">
-                <p><Clock size={14} /> Última sincronización: {new Date().toLocaleTimeString()}</p>
-              </div>
+              {stats.length > 0 ? (
+                <>
+                  <div className="hero-stat-main">
+                    <strong>{stats[0].value}</strong>
+                    <span>Evidencias totales bajo custodia</span>
+                  </div>
+                  <div className="hero-stat-footer">
+                    <p><Clock size={14} /> Última sincronización: {new Date().toLocaleTimeString()}</p>
+                  </div>
+                </>
+              ) : (
+                <p>No hay datos operativos disponibles.</p>
+              )}
             </div>
           </motion.article>
 
@@ -211,7 +217,7 @@ function Dashboard({ user, onLogout }) {
             {stats.map((item) => {
               const Icon = item.icon;
               return (
-                <motion.article key={item.label} className={`stat-card stat-${item.tone}`} whileHover={{ y: -4 }}>
+                <motion.article key={item.label} className={`stat-card stat-${item.tone}`} whileHover={{ y: -4 }} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                   <div className="stat-card-top">
                     <Icon size={22} />
                     <span>{item.label}</span>
@@ -234,8 +240,15 @@ function Dashboard({ user, onLogout }) {
             </div>
             <div className="panel-content">
               <p>Supervisa registros de custodia en tiempo real y clasifica eventos de conservacion, verificacion y firma.</p>
-              <div className="panel-list empty-state">
-                <p>No hay datos de custodia disponibles.</p>
+              <div className="panel-list">
+                {recentEvidences.length > 0 ? (
+                  <>
+                    <p className="panel-stat"><strong>{stats[0].value}</strong> Evidencias totales bajo custodia</p>
+                    <p className="panel-meta">Última sincronización: {new Date().toLocaleTimeString()}</p>
+                  </>
+                ) : (
+                  <p>No hay datos de custodia disponibles.</p>
+                )}
               </div>
             </div>
           </motion.div>
@@ -250,8 +263,15 @@ function Dashboard({ user, onLogout }) {
             </div>
             <div className="panel-content">
               <p>Obtiene un resumen rapido del analisis de integridad. Cada hash se registra como evidencia digital certificada.</p>
-              <div className="panel-list empty-state">
-                <p>No hay datos de verificación disponibles.</p>
+              <div className="panel-list">
+                {stats[1] && stats[1].value !== '0' ? (
+                  <>
+                    <p className="panel-stat"><strong>{stats[1].value}</strong> Hashes verificados</p>
+                    <p className="panel-meta">Integridad garantizada mediante SHA-256</p>
+                  </>
+                ) : (
+                  <p>No hay datos de verificación disponibles.</p>
+                )}
               </div>
             </div>
           </motion.div>
@@ -261,12 +281,10 @@ function Dashboard({ user, onLogout }) {
           <div className="section-header">
             <div className="section-title">
               <p className="eyebrow">Actividad Reciente</p>
-              <p className="eyebrow">Auditoría en Vivo</p>
               <h2>Timeline de operaciones</h2>
             </div>
             <Link to="/reportes" className="link-action">
               Ver historial completo <ArrowRight size={16} />
-              Ver historial completo <ArrowUpRight size={16} />
             </Link>
           </div>
 
