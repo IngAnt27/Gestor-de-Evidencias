@@ -1,6 +1,7 @@
-﻿import React from 'react';
+﻿import React, { useEffect, useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { API_BASE } from '../services/api';
 import {
   ShieldCheck,
   ShieldIcon,
@@ -9,6 +10,8 @@ import {
   Lock,
   Activity,
   ArrowRight,
+  ArrowUpRight,
+  Clock,
   LogOut,
   Sparkles,
   ClipboardList,
@@ -27,28 +30,19 @@ const navItems = [
   { to: '/configuracion', label: 'Configuracion', icon: Activity }
 ];
 
-const stats = [
-  { label: 'Evidencias Registradas', value: '1,248', icon: FileText, tone: 'primary' },
-  { label: 'Hashes Verificados', value: '934', icon: ShieldCheck, tone: 'success' },
-  { label: 'Firmas Emitidas', value: '582', icon: Sparkles, tone: 'secondary' },
-  { label: 'Alertas de Integridad', value: '12', icon: Lock, tone: 'danger' }
-];
-
-const recentActivity = [
-  { time: 'Ahora', title: 'Verificacion SHA-256 completada', subtitle: 'Documento EV-0012', status: 'success' },
-  { time: 'Hace 1h', title: 'Firma digital generada', subtitle: 'Cadena de custodia actualizada', status: 'primary' },
-  { time: 'Hace 3h', title: 'Nuevo caso cargado', subtitle: 'Evidencia EV-0231 recibida', status: 'secondary' },
-  { time: 'Ayer', title: 'Reporte de auditoria generado', subtitle: 'Exportado a PDF', status: 'muted' }
-];
-
-const recentEvidences = [
-  { code: 'EV-0012', name: 'Registro forense USB', type: 'Multimedia', status: 'Verificada', uploaded: '15 may', owner: 'Laura M.' },
-  { code: 'EV-0198', name: 'Captura de red', type: 'Pcap', status: 'En revision', uploaded: '14 may', owner: 'Miguel G.' },
-  { code: 'EV-0173', name: 'Documento juridico', type: 'PDF', status: 'Firmada', uploaded: '13 may', owner: 'Ana V.' },
-  { code: 'EV-0231', name: 'Imagen de camara', type: 'Foto', status: 'Pendiente', uploaded: '12 may', owner: 'Jorge L.' }
+const initialStats = [
+  { label: 'Evidencias Registradas', value: '0', icon: FileText, tone: 'primary' },
+  { label: 'Hashes Verificados', value: '0', icon: ShieldCheck, tone: 'success' },
+  { label: 'Firmas Emitidas', value: '0', icon: Sparkles, tone: 'secondary' },
+  { label: 'Alertas de Integridad', value: '0', icon: Lock, tone: 'danger' }
 ];
 
 function Dashboard({ user, onLogout }) {
+  const [stats, setStats] = useState(initialStats);
+  const [recentActivity, setRecentActivity] = useState([]);
+  const [recentEvidences, setRecentEvidences] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
   const { isDarkMode, toggleTheme } = useTheme();
 
@@ -56,6 +50,72 @@ function Dashboard({ user, onLogout }) {
     onLogout();
     navigate('/login');
   };
+
+  const handleNewEvidence = () => {
+    navigate('/evidencias');
+  };
+
+  const loadDashboardMetrics = useCallback(async () => {
+    setLoading(true);
+    setError('');
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE}/api/evidencias`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!response.ok) {
+        throw new Error('No se pudieron cargar los datos de evidencias');
+      }
+
+      const data = await response.json();
+      const total = data.length;
+      const verified = data.filter((item) => item.estado === 'Verificada').length;
+      const signed = data.filter((item) => item.estado === 'Firmada').length;
+      const alerts = data.filter((item) => item.estado === 'Pendiente').length;
+
+      setStats([
+        { label: 'Evidencias Registradas', value: total.toString(), icon: FileText, tone: 'primary' },
+        { label: 'Hashes Verificados', value: verified.toString(), icon: ShieldCheck, tone: 'success' },
+        { label: 'Firmas Emitidas', value: signed.toString(), icon: Sparkles, tone: 'secondary' },
+        { label: 'Alertas de Integridad', value: alerts.toString(), icon: Lock, tone: 'danger' }
+      ]);
+
+      setRecentEvidences(data.slice(0, 4).map((item) => ({
+        code: item.codigo,
+        name: item.nombre,
+        type: item.tipo,
+        status: item.estado,
+        uploaded: item.fecha_subida ? new Date(item.fecha_subida).toLocaleDateString() : '-',
+        owner: item.usuario_nombre || 'N/A'
+      })));
+
+      setRecentActivity(data.slice(0, 4).map((item) => ({
+        time: item.fecha_subida ? new Date(item.fecha_subida).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ahora',
+        title: `Evidencia ${item.codigo || item.nombre}`,
+        subtitle: item.descripcion || 'Carga de nueva evidencia',
+        status: item.estado === 'Verificada' ? 'success' : item.estado === 'Firmada' ? 'primary' : item.estado === 'secondary'
+      })));
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadDashboardMetrics();
+
+    const handleDashboardRefresh = () => {
+      loadDashboardMetrics();
+    };
+
+    window.addEventListener('dashboardRefresh', handleDashboardRefresh);
+    return () => {
+      window.removeEventListener('dashboardRefresh', handleDashboardRefresh);
+    };
+  }, [loadDashboardMetrics]);
 
   return (
     <div className="dashboard-shell">
@@ -84,6 +144,10 @@ function Dashboard({ user, onLogout }) {
           <div>
             <span className="status-dot success"></span>
             Conectado como <strong>{user?.nombre || 'Usuario'}</strong>
+            <div className="status-info">
+              <p className="status-user">{user?.nombre || 'Usuario'}</p>
+              <p className="status-role">{user?.rol || 'Investigador'}</p>
+            </div>
           </div>
           <button className="sidebar-logout" onClick={handleLogout}>
             <LogOut size={16} /> Cerrar sesion
@@ -96,15 +160,21 @@ function Dashboard({ user, onLogout }) {
           <div className="topbar-intro">
             <p className="eyebrow">Panel Corporativo</p>
             <h1>Monitoreo de Evidencias y Cadena de Custodia</h1>
+            <div className="topbar-badge">
+              <ShieldCheck size={12} />
+              <span>Cumplimiento Decreto 47-2008</span>
+            </div>
+            <h1>Panel de Control Forense</h1>
             <p className="topbar-copy">
               Visualiza el flujo forense, audita integridad hash y controla la trazabilidad con una interfaz disenada para equipos de ciberseguridad y fiscalias.
+              Gestión centralizada de evidencias digitales con integridad garantizada mediante SHA-256.
             </p>
           </div>
           <div className="topbar-actions">
             <button className="btn-outline" onClick={toggleTheme}>
               {isDarkMode ? <Sun size={16} /> : <Moon size={16} />} {isDarkMode ? 'Modo Claro' : 'Modo Oscuro'}
             </button>
-            <button className="btn-primary">Nueva evidencia</button>
+            <button className="btn-primary" onClick={handleNewEvidence}>Nueva evidencia</button>
           </div>
         </div>
 
@@ -114,17 +184,24 @@ function Dashboard({ user, onLogout }) {
               <div>
                 <p className="eyebrow">Vision General</p>
                 <h2>Estado operativo del sistema</h2>
+                <p className="eyebrow">Resumen del Sistema</p>
+                <h2>Integridad de la Base de Datos</h2>
               </div>
               <span className="badge primary">Sistema Estable</span>
-            </div>
-            <div className="hero-statistics">
-              <div>
-                <span className="stat-value">98.7%</span>
-                <p>Disponibilidad y respuesta</p>
+              <div className="pulse-indicator">
+                <span className="pulse-dot"></span>
+                <span className="badge primary">Sistema Activo</span>
               </div>
-              <div>
-                <span className="stat-value">462</span>
-                <p>Verificaciones esta semana</p>
+            </div>
+            <div className="hero-statistics empty-state">
+              <p>No hay datos operativos disponibles.</p>
+            <div className="hero-statistics">
+              <div className="hero-stat-main">
+                <strong>{stats[0].value}</strong>
+                <span>Evidencias totales bajo custodia</span>
+              </div>
+              <div className="hero-stat-footer">
+                <p><Clock size={14} /> Última sincronización: {new Date().toLocaleTimeString()}</p>
               </div>
             </div>
           </motion.article>
@@ -156,19 +233,8 @@ function Dashboard({ user, onLogout }) {
             </div>
             <div className="panel-content">
               <p>Supervisa registros de custodia en tiempo real y clasifica eventos de conservacion, verificacion y firma.</p>
-              <div className="panel-list">
-                <div className="panel-item">
-                  <p>Evidencias con sello legal</p>
-                  <strong>198</strong>
-                </div>
-                <div className="panel-item">
-                  <p>Revisiones pendientes</p>
-                  <strong>27</strong>
-                </div>
-                <div className="panel-item">
-                  <p>Alertas de integridad</p>
-                  <strong>4</strong>
-                </div>
+              <div className="panel-list empty-state">
+                <p>No hay datos de custodia disponibles.</p>
               </div>
             </div>
           </motion.div>
@@ -183,19 +249,8 @@ function Dashboard({ user, onLogout }) {
             </div>
             <div className="panel-content">
               <p>Obtiene un resumen rapido del analisis de integridad. Cada hash se registra como evidencia digital certificada.</p>
-              <div className="panel-list">
-                <div className="panel-item">
-                  <p>Confirmaciones</p>
-                  <strong>814</strong>
-                </div>
-                <div className="panel-item">
-                  <p>Rechazos</p>
-                  <strong>12</strong>
-                </div>
-                <div className="panel-item">
-                  <p>Procesos recientes</p>
-                  <strong>34</strong>
-                </div>
+              <div className="panel-list empty-state">
+                <p>No hay datos de verificación disponibles.</p>
               </div>
             </div>
           </motion.div>
@@ -205,24 +260,32 @@ function Dashboard({ user, onLogout }) {
           <div className="section-header">
             <div className="section-title">
               <p className="eyebrow">Actividad Reciente</p>
+              <p className="eyebrow">Auditoría en Vivo</p>
               <h2>Timeline de operaciones</h2>
             </div>
             <Link to="/reportes" className="link-action">
               Ver historial completo <ArrowRight size={16} />
+              Ver historial completo <ArrowUpRight size={16} />
             </Link>
           </div>
 
           <div className="timeline-list">
-            {recentActivity.map((item) => (
-              <motion.div key={item.time} className="timeline-item" whileHover={{ x: 4 }}>
-                <span className={`timeline-dot timeline-${item.status}`} />
-                <div>
-                  <p className="timeline-time">{item.time}</p>
-                  <h3>{item.title}</h3>
-                  <p>{item.subtitle}</p>
-                </div>
-              </motion.div>
-            ))}
+            {recentActivity.length > 0 ? (
+              recentActivity.map((item) => (
+                <motion.div key={item.time} className="timeline-item" whileHover={{ x: 4 }}>
+                  <span className={`timeline-dot timeline-${item.status}`} />
+                  <div>
+                    <p className="timeline-time">{item.time}</p>
+                    <h3>{item.title}</h3>
+                    <p>{item.subtitle}</p>
+                  </div>
+                </motion.div>
+              ))
+            ) : (
+              <div className="empty-state">
+                No hay actividad reciente disponible.
+              </div>
+            )}
           </div>
         </section>
 
@@ -236,34 +299,40 @@ function Dashboard({ user, onLogout }) {
           </div>
 
           <div className="table-wrapper">
-            <table className="dashboard-table">
-              <thead>
-                <tr>
-                  <th>Codigo</th>
-                  <th>Nombre de evidencia</th>
-                  <th>Tipo</th>
-                  <th>Estado</th>
-                  <th>Fecha</th>
-                  <th>Responsable</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentEvidences.map((evidence) => (
-                  <tr key={evidence.code}>
-                    <td>{evidence.code}</td>
-                    <td>{evidence.name}</td>
-                    <td>{evidence.type}</td>
-                    <td>
-                      <span className={`badge ${evidence.status === 'Verificada' ? 'success' : evidence.status === 'Firmada' ? 'primary' : evidence.status === 'Pendiente' ? 'danger' : 'secondary'}`}>
-                        {evidence.status}
-                      </span>
-                    </td>
-                    <td>{evidence.uploaded}</td>
-                    <td>{evidence.owner}</td>
+            {recentEvidences.length > 0 ? (
+              <table className="dashboard-table">
+                <thead>
+                  <tr>
+                    <th>Codigo</th>
+                    <th>Nombre de evidencia</th>
+                    <th>Tipo</th>
+                    <th>Estado</th>
+                    <th>Fecha</th>
+                    <th>Responsable</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {recentEvidences.map((evidence) => (
+                    <tr key={evidence.code}>
+                      <td>{evidence.code}</td>
+                      <td>{evidence.name}</td>
+                      <td>{evidence.type}</td>
+                      <td>
+                        <span className={`badge ${evidence.status === 'Verificada' ? 'success' : evidence.status === 'Firmada' ? 'primary' : evidence.status === 'Pendiente' ? 'danger' : 'secondary'}`}>
+                          {evidence.status}
+                        </span>
+                      </td>
+                      <td>{evidence.uploaded}</td>
+                      <td>{evidence.owner}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="empty-state">
+                No hay evidencias recientes disponibles.
+              </div>
+            )}
           </div>
         </section>
       </main>

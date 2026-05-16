@@ -60,6 +60,7 @@ function SubirEvidencia({ user, onEvidenciaSubida }) {
         setSuccess(`Evidencia "${data.nombre}" subida exitosamente. Código: ${data.codigo}`);
         setFormData({ nombre: '', descripcion: '' });
         setFile(null);
+        window.dispatchEvent(new Event('dashboardRefresh'));
         
         setTimeout(() => {
           onEvidenciaSubida();
