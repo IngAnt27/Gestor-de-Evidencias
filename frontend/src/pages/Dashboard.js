@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { API_BASE } from '../services/api';
@@ -102,7 +102,7 @@ function Dashboard({ user, onLogout }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadDashboardMetrics();
@@ -195,6 +195,7 @@ function Dashboard({ user, onLogout }) {
             </div>
             <div className="hero-statistics empty-state">
               <p>No hay datos operativos disponibles.</p>
+            </div>
             <div className="hero-statistics">
               <div className="hero-stat-main">
                 <strong>{stats[0].value}</strong>
