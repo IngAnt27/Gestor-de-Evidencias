@@ -264,7 +264,7 @@ function Dashboard({ user, onLogout }) {
             <div className="panel-content">
               <p>Obtiene un resumen rapido del analisis de integridad. Cada hash se registra como evidencia digital certificada.</p>
               <div className="panel-list">
-                {stats[1] && stats[1].value !== '0' ? (
+                {stats[1] && parseInt(stats[1].value) > 0 ? (
                   <>
                     <p className="panel-stat"><strong>{stats[1].value}</strong> Hashes verificados</p>
                     <p className="panel-meta">Integridad garantizada mediante SHA-256</p>
